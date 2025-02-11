@@ -166,7 +166,21 @@
 
     </div>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    
+    <script>
+      let app = Vue.createApp({
+        data() {
+          return {
+            inventory: {
+              carrots: 0,
+              pineapples: 0,
+              cherries: 0
+            }
+          }
+        }
+      });
+
+      app.mount('#app');
+    </script>
 
   </body>
 </html>
