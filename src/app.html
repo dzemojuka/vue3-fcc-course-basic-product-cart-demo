@@ -23,7 +23,7 @@
         </nav>
         <a @click="toggleSidebar" class="top-bar-cart-link">
           <i class="icofont-cart-alt icofont-1x"></i>
-          <span>Cart (0)</span>
+          <span>Cart {{ totalQuantity }}</span>
         </a>
       </header>
 
@@ -78,6 +78,8 @@
       v-if="showSidebar" 
       :toggle="toggleSidebar"
       :cart="cart"
+      :inventory="inventory"
+      :remove="removeItem"
       />
       <footer></footer>
     </div>
@@ -91,13 +93,25 @@
             cart: {},
           };
         },
+        computed: {
+          totalQuantity() {
+            const quantity = Object.values(this.cart).reduce((acc, curr) => {
+              return acc+curr;
+            },0);
+            return quantity;
+          }
+        },
         methods: {
           addToCart(name, index) {
             if(!this.cart[name]) this.cart[name]=0;
             this.cart[name] += this.inventory[index].quantity;
+            this.inventory[index].quantity=0;
           },
           toggleSidebar() {
             this.showSidebar = !this.showSidebar;
+          },
+          removeItem(name) {
+            delete this.cart[name];
           }
         },
         async mounted() {
@@ -107,10 +121,20 @@
           }
       });
       app.component("sidebar", {
-        props: ['toggle', 'cart'],
-        computed: {
-          cartTotal() {
-            return (this.cart.carrots * 4.82).toFixed(2);
+        props: ['toggle', 'cart', 'inventory', 'remove'],
+        computed: {},
+        methods: {
+          getPrice(name) {
+            const product = this.inventory.find((p) => {
+              return p.name === name;
+            })
+            return product.price.USD;
+          },
+          calculateTotal() { //curr=object with name:price
+            const total = Object.entries(this.cart).reduce((acc, curr, index) => {
+              return acc + (curr[1] * this.getPrice(curr[0]));
+            }, 0)
+            return total.toFixed(2);
           }
         },
         template: `
@@ -137,14 +161,15 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
+                <!-- When iterating through an object, value goes first and then key, for example v-for="(val,key)" -->
+                  <tr v-for="(quantity, key, i) in cart" :key="i" >
                     <td><i class="icofont-carrot icofont-3x"></i></td>
-                    <td>Carrot</td>
-                    <td>$1.00</td>
-                    <td class="center">{{ cart.carrots }}</td>
-                    <td>\${{ cart.carrots * 4.82 }}</td>
+                    <td>{{ key }}</td>
+                    <td>\${{ getPrice(key) }}</td>
+                    <td class="center">{{ quantity }}</td>
+                    <td>\${{ quantity*getPrice(key) }}</td>
                     <td class="center">
-                      <button class="btn btn-light cart-remove">
+                      <button @click="remove(key)" class="btn btn-light cart-remove">
                         &times;
                       </button>
                     </td>
@@ -152,9 +177,9 @@
                 </tbody>
               </table>
 
-              <p class="center"><em>No items in cart</em></p>
+              <p class="center" v-if="!Object.keys(cart).length"><em>No items in cart</em></p>
               <div class="spread">
-                <span><strong>Total:</strong>{{ cartTotal }}</span>
+                <span><strong>Total:</strong>{{ calculateTotal() }}</span>
                 <button class="btn btn-light">Checkout</button>
               </div>
             </div>
